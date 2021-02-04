@@ -2,11 +2,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class ChatApp extends JFrame {
     private ArrayList<JLabel> messages = new ArrayList<>();
@@ -20,12 +20,16 @@ public class ChatApp extends JFrame {
     private JPanel chatWindow = new JPanel();
     private String userName;
     private JButton sendButton = new JButton("Отправить");
+    private String loginNameforLogfile;
+    private File logFile;
+    private int showLogStartCounter = 1;
+
 
     public ChatApp() {
 
         setTitle("Chat App Window");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setBounds(200, 200, 450, 600);
+        setBounds(200, 200, 500, 600);
 
         setLayout(new BorderLayout(10, 10));
 
@@ -86,8 +90,6 @@ public class ChatApp extends JFrame {
         bottomMessagePanel.add(messageField, BorderLayout.CENTER);
 
         setVisible(true);
-
-        connect();
     }
 
     public void connect() {
@@ -100,6 +102,8 @@ public class ChatApp extends JFrame {
                     try {
                         String msg = in.readUTF();
                         messages.add(new JLabel(msg));
+                        createChatLog(msg);
+                        chatLogging(msg);
                         for (JLabel i : messages) {
                             chatWindow.add(i);
                         }
@@ -131,12 +135,67 @@ public class ChatApp extends JFrame {
 //    }
 
     public void sendAuth() {
+        loginNameforLogfile = loginField.getText();
+        logFile = new File("client/src/main/java/", "/history_" + loginNameforLogfile + ".txt");
         connect();
-        // /auth login1 password1
+        // /auth login1 pass1
         sendMsg("/auth " + loginField.getText() + " " + passField.getText());
         loginField.setText("");
         passField.setText("");
     }
-}
 
+    public void createChatLog(String msg) {
+        try {
+            if (msg.equals("/authok")) {
+                if (logFile.exists()) {
+                    showLast100();
+                } else {
+                    logFile.createNewFile();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void chatLogging(String msg) {
+        try {
+            FileOutputStream logOutStream = new FileOutputStream(logFile, true);
+            try {
+                byte[] outData = (msg + "\n").getBytes(StandardCharsets.UTF_8);
+                logOutStream.write(outData);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showLast100() {
+        ArrayList logArray = new ArrayList();
+        try {
+            FileReader fr = new FileReader(logFile);
+            Scanner scan = new Scanner(fr);
+
+            while (scan.hasNextLine()) {
+                logArray.add(scan.nextLine());
+            }
+
+            try {
+                fr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        System.out.println(logArray.size());
+        System.out.println(logArray.size()-101);
+        for (int i = (logArray.size()-101); i<logArray.size(); i++) {
+            messages.add(new JLabel(String.valueOf(logArray.get(i))));
+        }
+
+    }
+}
 
