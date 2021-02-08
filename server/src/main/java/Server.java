@@ -27,7 +27,7 @@ public class Server {
     }
 
     public void subscribe(ClientHandler client) {
-        clients.add(client);
+        clients.add((ClientHandler) client);
     }
 
     public void unsubscribe(ClientHandler client) {
